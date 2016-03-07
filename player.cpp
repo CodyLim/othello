@@ -8,7 +8,8 @@
 Player::Player(Side side) {
     // Will be set to true in test_minimax.cpp.
     testingMinimax = false;
-	int player_score = 0;
+    int player_score = 0;
+    int snape = 394;
 	
     /* 
      * TODO: Do any initialization you need to do here (setting up the board,
