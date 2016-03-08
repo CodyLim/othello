@@ -9,14 +9,7 @@
 Player::Player(Side side) {
     // Will be set to true in test_minimax.cpp.
     testingMinimax = false;
-//    int player_score = 0;
-//    int snape = 394;
-	
-    /* 
-     * TODO: Do any initialization you need to do here (setting up the board,
-     * precalculating things, etc.) However, remember that you will only have
-     * 30 seconds.
-     */
+    
     board = new Board();
     playerSide = side;
     opponentSide = side == WHITE ? BLACK : WHITE;
@@ -69,12 +62,6 @@ Move *Player::doMove(Move *opponentsMove, int msLeft) {
         }
     }
     delete experiment;
-/*  for (int i = 0; i < (int) playerMoves.size(); i++) {
-        for (int j = 0; j < (int) opponentMoves[i].size(); j++) {
-            std::cerr << playerMoves[i].getX() << playerMoves[i].getY() << std::endl;
-            std::cerr << opponentMoves[i][j].getX() << opponentMoves[i][j].getY() << std::endl;
-        }
-    }*/
     if (playerMoves.size() == 0) {
         return NULL;
     } else {
@@ -102,27 +89,6 @@ Move *Player::doMove(Move *opponentsMove, int msLeft) {
                 index = i;
             }
         }
-/*      for (int i = 0; i < (int) moves.size(); i += 2) {
-            experiment->doMove(&moves[i], playerSide);
-            int heuristic = experiment->count(playerSide) - experiment->count(opponentSide);
-            int x = moves[i].getX();
-            int y = moves[i].getY();
-            if((x == 0 || x == 7) && (y == 0 || y == 7)) {
-                heuristic = 3 * (heuristic > 0 ? 1 : -1);
-            } else if ((x == 0 && (y == 1 || y == 6)) ||
-                       (x == 1 && (y == 0 || y == 7)) ||
-                       (x == 6 && (y == 0 || y == 7)) ||
-                       (x == 7 && (y == 1 || y == 6))) {
-                heuristic *= -3 * (heuristic > 0 ? 1 : -1);
-            }
-            if (i == 0) {
-                maxHeuristic = heuristic;
-            } else if (heuristic > maxHeuristic) {
-                maxHeuristic = heuristic;
-                index = i;
-            }
-            experiment = board->copy();
-        }*/
         delete experiment;
         // Make any move with max heuristic
         board->doMove(&playerMoves[index], playerSide);
