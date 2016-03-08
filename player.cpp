@@ -1,4 +1,5 @@
 #include "player.h"
+#include <vector>
 
 /*
  * Constructor for the player; initialize everything here. The side your AI is
@@ -8,20 +9,24 @@
 Player::Player(Side side) {
     // Will be set to true in test_minimax.cpp.
     testingMinimax = false;
-    int player_score = 0;
-    int snape = 394;
+//    int player_score = 0;
+//    int snape = 394;
 	
     /* 
      * TODO: Do any initialization you need to do here (setting up the board,
      * precalculating things, etc.) However, remember that you will only have
      * 30 seconds.
      */
+    board = new Board();
+    playerSide = side;
+    opponentSide = side == WHITE ? BLACK : WHITE;
 }
 
 /*
  * Destructor for the player.
  */
 Player::~Player() {
+    delete board;
 }
 
 /*
@@ -37,9 +42,94 @@ Player::~Player() {
  * return NULL.
  */
 Move *Player::doMove(Move *opponentsMove, int msLeft) {
-    /* 
-     * TODO: Implement how moves your AI should play here. You should first
-     * process the opponent's opponents move before calculating your own move
-     */ 
-    return NULL;
+    // Process opponent move
+    board->doMove(opponentsMove, opponentSide);
+    // Compute all possible 2-ply moves
+    std::vector<Move> playerMoves;
+    std::vector< std::vector<Move> > opponentMoves;
+    Board *experiment = board->copy();
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) {
+            Move playerMove = Move(i, j);
+            if (experiment->checkMove(&playerMove, playerSide)) {
+                experiment->doMove(&playerMove, playerSide);
+                playerMoves.push_back(playerMove);
+                std::vector<Move> someMoves;
+                for (int m = 0; m < 8; m++) {
+                    for (int n = 0; n < 8; n++) {
+                        Move opponentMove = Move(m, n);
+                        if (experiment->checkMove(&opponentMove, opponentSide)) {
+                            someMoves.push_back(opponentMove);
+                        }
+                    }
+                }
+                experiment = board->copy();
+                opponentMoves.push_back(someMoves);
+            }
+        }
+    }
+    delete experiment;
+/*  for (int i = 0; i < (int) playerMoves.size(); i++) {
+        for (int j = 0; j < (int) opponentMoves[i].size(); j++) {
+            std::cerr << playerMoves[i].getX() << playerMoves[i].getY() << std::endl;
+            std::cerr << opponentMoves[i][j].getX() << opponentMoves[i][j].getY() << std::endl;
+        }
+    }*/
+    if (playerMoves.size() == 0) {
+        return NULL;
+    } else {
+        // Assign each pair of moves a heuristic and determine the minimax
+        Board *experiment = board->copy();
+        int maximum;
+        int index = 0;
+        for (int i = 0; i < (int) playerMoves.size(); i++) {
+            int minimum;
+            if (opponentMoves[i].size() == 0) {
+                minimum = 65;
+            } else {
+                for (int j = 0; j < (int) opponentMoves[i].size(); j++) {
+                    experiment->doMove(&playerMoves[i], playerSide);
+                    experiment->doMove(&opponentMoves[i][j], opponentSide);
+                    int heuristic = experiment->count(playerSide) - experiment->count(opponentSide);
+                    if (j == 0 || heuristic < minimum) {
+                        minimum = heuristic;
+                    }
+                    experiment = board->copy();
+                }
+            }
+            if (i == 0 || minimum > maximum) {
+                maximum = minimum;
+                index = i;
+            }
+        }
+/*      for (int i = 0; i < (int) moves.size(); i += 2) {
+            experiment->doMove(&moves[i], playerSide);
+            int heuristic = experiment->count(playerSide) - experiment->count(opponentSide);
+            int x = moves[i].getX();
+            int y = moves[i].getY();
+            if((x == 0 || x == 7) && (y == 0 || y == 7)) {
+                heuristic = 3 * (heuristic > 0 ? 1 : -1);
+            } else if ((x == 0 && (y == 1 || y == 6)) ||
+                       (x == 1 && (y == 0 || y == 7)) ||
+                       (x == 6 && (y == 0 || y == 7)) ||
+                       (x == 7 && (y == 1 || y == 6))) {
+                heuristic *= -3 * (heuristic > 0 ? 1 : -1);
+            }
+            if (i == 0) {
+                maxHeuristic = heuristic;
+            } else if (heuristic > maxHeuristic) {
+                maxHeuristic = heuristic;
+                index = i;
+            }
+            experiment = board->copy();
+        }*/
+        delete experiment;
+        // Make any move with max heuristic
+        board->doMove(&playerMoves[index], playerSide);
+        return new Move(playerMoves[index].getX(), playerMoves[index].getY());
+    }
+}
+
+void Player::setBoard(char board[]) {
+    this->board->setBoard(board);
 }
