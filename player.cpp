@@ -18,8 +18,79 @@ Player::Player(Side side) {
 /*
  * Destructor for the player.
  */
-Player::~Player() {
+Player::~Player() 
+{
     delete board;
+}
+
+/*Principal variation search (PVS) based on Wikipedia pseudocode.
+ */
+int Player::pvs(Board game_board, Side player_Side, Side opponent_Side, \
+int alpha, int beta, int depth)
+{
+	if (depth <= 0 || game_board.hasMoves(player_Side) == false)
+	{
+		int score = 0;
+		for (int i = 0; i < 8; i++)
+		{
+			for (int j = 0; j < 8; j++)
+			{
+				if(game_board.get(player_Side, j, i))
+				{
+					score += heuristic_score[j][i];
+				}
+				else if (game_board.get(opponent_Side, j, i))
+				{
+					score -= heuristic_score[j][i];
+				}
+			}
+		}
+		return score;
+	}
+	else
+	{
+		// Compute all possible 2-ply moves for the player's side
+		std::vector<Move*> playerMoves;
+		for (int i = 0; i < 8; i++)
+		{
+			for (int j = 0; j < 8; j++)
+			{
+				Move * playerMove = new Move(j, i);
+				if (game_board.checkMove(playerMove, player_Side))
+				{
+					playerMoves.push_back(playerMove);
+				}
+			}
+		}
+		for (unsigned int i = 0; i < playerMoves.size(); i++)
+		{
+			Board *experiment = game_board.copy();
+			experiment->set(player_Side, playerMoves.at(i)->getX(), \
+			playerMoves.at(i)->getY());
+			int score;
+			if (i != 0)
+			{
+				score = -pvs(*experiment, opponent_Side, player_Side, \
+				-alpha - 1, -alpha, depth - 1);
+				if (alpha < score && score < beta)
+				{
+					score = -pvs(*experiment, opponent_Side, player_Side, \
+					-beta, -score, depth - 1);
+				}
+			}
+			else
+			{
+				score = -pvs(*experiment, opponent_Side, player_Side, \
+				-beta, -alpha, depth - 1);
+			}
+			alpha = max(alpha, score);
+			if (alpha >= beta)
+			{
+				return alpha;
+			}
+		}
+		return alpha;
+	}
 }
 
 /*
@@ -36,65 +107,49 @@ Player::~Player() {
  */
 Move *Player::doMove(Move *opponentsMove, int msLeft) {
     // Process opponent move
-    board->doMove(opponentsMove, opponentSide);
-    // Compute all possible 2-ply moves
-    std::vector<Move> playerMoves;
-    std::vector< std::vector<Move> > opponentMoves;
-    Board *experiment = board->copy();
-    for (int i = 0; i < 8; i++) {
-        for (int j = 0; j < 8; j++) {
-            Move playerMove = Move(i, j);
-            if (experiment->checkMove(&playerMove, playerSide)) {
-                experiment->doMove(&playerMove, playerSide);
+    if (opponentsMove != NULL)
+    {
+		board->doMove(opponentsMove, opponentSide);
+	}
+	// Compute all possible 2-ply moves for the player's side
+    std::vector<Move*> playerMoves;
+    for (int i = 0; i < 8; i++)
+    {
+        for (int j = 0; j < 8; j++)
+        {
+            Move * playerMove = new Move(j, i);
+            if ((*board).checkMove(playerMove, playerSide))
+            {
                 playerMoves.push_back(playerMove);
-                std::vector<Move> someMoves;
-                for (int m = 0; m < 8; m++) {
-                    for (int n = 0; n < 8; n++) {
-                        Move opponentMove = Move(m, n);
-                        if (experiment->checkMove(&opponentMove, opponentSide)) {
-                            someMoves.push_back(opponentMove);
-                        }
-                    }
-                }
-                experiment = board->copy();
-                opponentMoves.push_back(someMoves);
             }
         }
     }
-    delete experiment;
-    if (playerMoves.size() == 0) {
+    if (playerMoves.size() == 0) 
+    {
         return NULL;
-    } else {
-        // Assign each pair of moves a heuristic and determine the minimax
-        Board *experiment = board->copy();
-        int maximum;
-        int index = 0;
-        for (int i = 0; i < (int) playerMoves.size(); i++) {
-            int minimum;
-            if (opponentMoves[i].size() == 0) {
-                minimum = 65;
-            } else {
-                for (int j = 0; j < (int) opponentMoves[i].size(); j++) {
-                    experiment->doMove(&playerMoves[i], playerSide);
-                    experiment->doMove(&opponentMoves[i][j], opponentSide);
-                    int heuristic = experiment->count(playerSide) - experiment->count(opponentSide);
-                    if (j == 0 || heuristic < minimum) {
-                        minimum = heuristic;
-                    }
-                    experiment = board->copy();
-                }
-            }
-            if (i == 0 || minimum > maximum) {
-                maximum = minimum;
-                index = i;
-            }
-        }
-        delete experiment;
-        // Make any move with max heuristic
-        board->doMove(&playerMoves[index], playerSide);
-        return new Move(playerMoves[index].getX(), playerMoves[index].getY());
     }
+    else
+    {
+		int high_score = -999999;
+		Move * optimal_move = playerMoves.at(0);
+		for (unsigned int i = 0; i < playerMoves.size(); i++)
+		{
+			Board *experiment = board->copy();
+			experiment->set(playerSide, playerMoves.at(i)->getX(), \
+			playerMoves.at(i)->getY());
+			int score = -pvs(*experiment, opponentSide, playerSide, \
+			-9001, 9001, 3);
+			if (high_score < score)
+			{
+				high_score = score;
+				optimal_move = playerMoves.at(i);
+			}
+		}
+		board->doMove(optimal_move, playerSide);
+		return optimal_move;
+	}
 }
+		
 
 void Player::setBoard(char board[]) {
     this->board->setBoard(board);
